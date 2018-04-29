@@ -9,14 +9,18 @@ https://github.com/adafruit/Fritzing-Library/tree/master/parts
 
 https://github.com/DFRobot/Fritzing-library/blob/master/DFRobot_fritzing_library.fzbz
 
-- ELectrovalvula --
+- ELectrovalvula
 
 https://github.com/adafruit/Fritzing-Library/blob/master/parts/Plastic%20Solenoid%20Valve.fzpz
 
--- Relay --
+- Relay
 
 https://github.com/rwaldron/fritzing-components/tree/master/components
 
--- Ultrasonido --
+- Ultrasonido 
 
 http://fritzing.org/projects/sensor-ultrasonico-hc-sr04
+
+- ESp8266
+
+https://github.com/squix78/esp8266-fritzing-parts/tree/master/nodemcu-v1.0
