@@ -24,3 +24,5 @@ http://fritzing.org/projects/sensor-ultrasonico-hc-sr04
 - ESp8266
 
 https://github.com/squix78/esp8266-fritzing-parts/tree/master/nodemcu-v1.0
+
+https://github.com/squix78/esp8266-fritzing-parts
