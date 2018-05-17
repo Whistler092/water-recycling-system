@@ -17,13 +17,19 @@
 
 #include <ESP8266WebServer.h>
 #include <ESP8266WebServerSecure.h>
- 
 
-#define pintrigger 4
-#define pinecho 5
-#define pinelectrovalve 14
-#define led2 2
+/*
+   Conectarse a una red wifi
 
+
+*/
+// Librerias
+/*#include <ESP8266WiFi.h>*/
+/*#include <PubSubClient.h>*/
+/*#include <EEPROM.h>*/
+
+/*WiFiClient espClient;
+PubSubClient client(espClient);*/
 ESP8266WebServer server(80);
 
 // WIFI Por defecto
@@ -35,10 +41,6 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(9600);
   EEPROM.begin(512);
-  pinMode(pintrigger, OUTPUT);
-  pinMode(pinecho, INPUT);
-  pinMode(pinelectrovalve, OUTPUT);
-  pinMode(led2, OUTPUT);
   if (WiFi.status() == WL_CONNECTED) { 
     Serial.print("ESP conectado al wifi");
     /*sendData("HOla desde la ESP");*/
@@ -49,69 +51,14 @@ void setup() {
 }
 
 void loop() {
-    // put your main code here, to run repeatedly:
-    server.handleClient();
-    //Sensor Tubidity
-    int sensorValue = analogRead(A0);// read the input on analog pin 0:
-    
-    float voltage = sensorValue * (5.0 / 1024.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-    Serial.println(voltage); // print out the value you read:
-    //Serial.println(sensorValue); // print out the value you read:
-    //delay(500);
-    if (voltage < 4.3) {
-      Serial.println("el agua esta sucia");
-    }
-    else {
-      Serial.println("pro");
-      electrovalve();
-    }
-  
-    delay(500);
+  // put your main code here, to run repeatedly:
+  server.handleClient();
+  sendData("Hola desde la ESP");
+  delay(1000);                       // wait for a second
 
 
 }
 
-/*
- * 
- * 
- * Logica de negocio
- */
-
-void electrovalve(){
-  //Conection HC-SR04 and Electrovalve
-  long duration, distance;
-  digitalWrite(pintrigger, LOW);  // Added this line
-  delayMicroseconds(2); // Added this line
-  digitalWrite(pintrigger, HIGH);
-  //  delayMicroseconds(1000); - Removed this line
-  delayMicroseconds(10); // Added this line
-  digitalWrite(pintrigger, LOW);
-  duration = pulseIn(pinecho, HIGH);
-  distance = (duration/2) / 29.1;
-  if (distance < 4) {  // This is where the LED On/Off happens
-    digitalWrite(pinelectrovalve,HIGH); // When the Red condition is met, the Green LED should turn off
-    digitalWrite(led2,LOW);
-  }
-  else {
-    digitalWrite(pinelectrovalve,LOW);
-    digitalWrite(led2,HIGH);
-  }
-  if (distance >= 200 || distance <= 0){
-    Serial.println("Fuera de Rango");
-  }
-  else {
-    Serial.print(distance);
-    Serial.println(" cm");
-  }
-}
-
-
-/**
- * 
- * 
- * Logica de negocio para las peticiones HTTP y wifi
- * 
- * **/
 void sendData(String content)
 {
   Serial.println("Enviando petición http");
