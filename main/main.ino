@@ -39,6 +39,8 @@ void setup() {
   pinMode(led2, OUTPUT);
   if (WiFi.status() == WL_CONNECTED) { 
     Serial.print("ESP conectado al wifi");
+    ESP.reset();
+    /*digitalWrite(pinelectrovalve,LOW);*/
     /*sendData("HOla desde la ESP");*/
   } else {
     ConectarWifi();
@@ -47,26 +49,30 @@ void setup() {
 }
 
 void loop() {
+  
     // put your main code here, to run repeatedly:
     server.handleClient();
-    //Sensor Tubidity
-    int sensorValue = analogRead(A0);// read the input on analog pin 0:
-    
-    float voltage = sensorValue * (5.0 / 1024.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-    Serial.println(voltage); // print out the value you read:
-    //Serial.println(sensorValue); // print out the value you read:
-    //delay(500);
-    if (voltage < 4.3) {
-      Serial.println("el agua esta sucia");
+    if (WiFi.status() == WL_CONNECTED) { 
+       //Sensor Tubidity
+      int sensorValue = analogRead(A0);// read the input on analog pin 0:
+      
+      float voltage = sensorValue * (5.0 / 1024.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
+      Serial.println(voltage); // print out the value you read:
+      //Serial.println(sensorValue); // print out the value you read:
+      //delay(500);
+      if (voltage < 4.3) {
+        Serial.println("el agua esta sucia");
+        digitalWrite(pintrigger, LOW);
+        digitalWrite(pinecho, LOW);
+        digitalWrite(pinelectrovalve, HIGH);
+        digitalWrite(led2,HIGH);
+      }
+      else {
+        /*Serial.println("Reciclando ");*/
+        electrovalve();
+      }
     }
-    else {
-      Serial.println("Reciclando ");
-      electrovalve();
-    }
-  
     delay(500);
-
-
 }
 
 /*
@@ -120,17 +126,20 @@ void sendData(String content)
   Serial.println("Enviando petición http");
 
   HTTPClient http;
-  http.begin("http://168.62.36.18:5000/api/logs");
+  http.begin("http://40.117.141.143:5000/api/logs");
   http.addHeader("Content-Type", "application/json");
   http.POST((String)"{ 'description' : '" + content + "'}");
-  Serial.println((String)"Resultado: "+ http.getString());
+  /*Serial.println((String)"Enviando petición http ... Resultado: "+ http.getString());*/
+  http.writeToStream(&Serial);
+
   http.end();
+  Serial.println("Petición http enviada");
 }
 
 String st = "";
 
 void ConectarWifi(void) {
-
+  
   Serial.println("SETUP: Cargando el ssid y clave almacenada en EEPROM ");
   String esid;
   for (int i = 0; i < 32; ++i)
@@ -305,6 +314,7 @@ void createWebServer(int webtype){
           EEPROM.commit();
           content = "{\"Terminado! \":\"saved to eeprom... reset to boot into new wifi\"}";
           statusCode = 200;
+          ESP.restart();
         } else {
           content = "{\"Error\":\"404 not found\"}";
           statusCode = 404;
@@ -334,10 +344,3 @@ void createWebServer(int webtype){
     
   }
 }
-
-
-
-
-
-
-
