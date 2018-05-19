@@ -19,10 +19,10 @@
  Some code and wiring inspired by http://en.wikiversity.org/wiki/User:Dstaub/robotcar
  */
 
-#define pintrigger 4
-#define pinecho 5
-#define pinelectrovalve 14
-#define led2 2
+#define pintrigger 10       //Cambiar de 4 a 10
+#define pinecho 9           //Cambiar de 5 a 9
+#define pinelectrovalve 13  //Cambiar de 14 a 13
+#define led2 15              //Cambiar de 2 a 15
 
 ESP8266WebServer server(80);
 
@@ -66,8 +66,11 @@ void setup() {
   if (WiFi.status() == WL_CONNECTED) { 
     lcd.clear();
     lcd.setCursor(0,1);
-    lcd.print("Conexión establecida al wifi");
+    lcd.print("Conexion establecida al wifi");
     Serial.print("ESP conectado al wifi");
+
+    registrarESP();
+    
     ESP.reset();
     /*digitalWrite(pinelectrovalve,LOW);*/
     /*sendData("HOla desde la ESP");*/
@@ -83,6 +86,8 @@ void loop() {
     server.handleClient();
     
     if (WiFi.status() == WL_CONNECTED) { 
+
+      
       
       Serial.println("leyendo...");
        //Sensor Tubidity
@@ -94,10 +99,12 @@ void loop() {
       //delay(500);
       if (voltage < 4.3) {
         /*lcd.clear();*/
-        lcd.setCursor(1,2);
+        lcd.setCursor(0,1);
         lcd.print("Leyendo ...");
         lcd.setCursor(3,4);
-        lcd.print((String)"El agua está sucia" + voltage);
+        lcd.print((String)"Estado agua");
+        lcd.setCursor(4,5);
+        lcd.print((String)"Sucia " + voltage);
         /*lcd.clear();
         lcd.setCursor(0,1);
         lcd.print("Leyendo...");
@@ -138,7 +145,10 @@ void electrovalve(){
   if (distance < 4) {  // This is where the LED On/Off happens
     digitalWrite(pinelectrovalve,HIGH); // When the Red condition is met, the Green LED should turn off
     digitalWrite(led2,LOW);
-    sendData((String)"Lleno " + distance + "CM");
+    /*sendData((String)"Lleno " + distance + "CM");*/
+    /*
+     * TODO: Enviar notificación de llenado
+     */
 
     lcd.clear();
     lcd.setCursor(0,1);
@@ -167,7 +177,9 @@ void electrovalve(){
     Serial.print(distance);
     Serial.println(" cm");
     sendData((String)"llenando " + distance);
-
+    /*
+     * TODO: Enviar notificación de llenado
+     */
     lcd.clear();
     lcd.setCursor(0,1);
     lcd.print("Leyendo...");
@@ -189,7 +201,7 @@ void sendData(String content)
   Serial.println("Enviando petición http");
 
   HTTPClient http;
-  http.begin("http://40.117.141.143:5000/api/logs");
+  http.begin("http://wr.ramirobedoya.me:5000/api/logs");
   http.addHeader("Content-Type", "application/json");
   http.POST((String)"{ 'description' : '" + content + "'}");
   /*Serial.println((String)"Enviando petición http ... Resultado: "+ http.getString());*/
@@ -197,6 +209,44 @@ void sendData(String content)
 
   http.end();
   Serial.println("Petición http enviada");
+}
+
+String registrationCode = "";
+void registrarESP(void)
+{
+  registrationCode = "";
+  for (int i = 96; i < 100; ++i)
+  {
+    registrationCode += char(EEPROM.read(i));
+  }  
+  if(registrationCode.length() > 1 && registrationCode == "⸮⸮⸮⸮")
+  {
+    Serial.println("registrationCode: " + registrationCode);  
+  }else {
+    Serial.println("Registrando ESP en http://wr.ramirobedoya.me:5000/api/devices/new");
+
+    HTTPClient http;
+    int httpBeginCode = http.begin("http://wr.ramirobedoya.me:5000/api/devices/new");
+    int httpGETCode = http.GET();
+    // Print responses
+    Serial.println(httpBeginCode);
+    Serial.println(httpGETCode);
+      
+    String code = http.getString();
+    Serial.println((String)"Enviando petición http ... Resultado: "+ code);
+
+    for (int i = 0; i < code.length(); ++i)
+    {
+      EEPROM.write(i + 96, code[i]);
+      Serial.println((String)"Wrote: " + code[i] + " at " + i);      
+    }    
+    EEPROM.commit();
+  
+    http.end();
+    Serial.println("Petición http enviada, guardando codigo");
+
+    
+  }
 }
 
 String st = "";
@@ -223,6 +273,7 @@ void ConectarWifi(void) {
   }
   Serial.println("PASS: " + epass);
 
+
   if (esid.length() > 1 )
   {   
     
@@ -236,6 +287,9 @@ void ConectarWifi(void) {
       lcd.setCursor(4,5);
       lcd.print("    :)");
       Serial.println("ESP esta conectado a Wifi");
+
+      registrarESP();
+
       
       digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
       delay(1000);                       // wait for a second
@@ -285,12 +339,12 @@ void launchWeb(int webtype) {
     Serial.print((String)"Conectese a al AP con SSID " + ssid);
     Serial.print("Para conectar ESP a una red WiFi use http://" + WiFi.softAPIP());
   }else {
-    Serial.print("Conectado a: ");
-    String esid;
-    for (int i = 0; i < 32; ++i)
-    {
-      esid += char(EEPROM.read(i));
-    }
+      Serial.print("Conectado a: ");
+      String esid;
+      for (int i = 0; i < 32; ++i)
+      {
+        esid += char(EEPROM.read(i));
+      }
     Serial.println(esid);
     
   }
@@ -419,9 +473,15 @@ void createWebServer(int webtype){
               Serial.println(qpass[i]); 
             }    
           EEPROM.commit();
-          content = "{\"Terminado! \":\"saved to eeprom... reset to boot into new wifi\"}";
+          content = "{\"Terminado! \":\"Archivos de configuración guardados correctamente... Reinicia el dispositivo para tomar la nueva configuración\"}";
           statusCode = 200;
-          ESP.restart();
+          lcd.clear();
+          lcd.setCursor(1,2);
+          lcd.print("Reinicia");
+          lcd.setCursor(0,2);
+          lcd.print("Para Continuar");
+         
+          /*ESP.restart();*/
         } else {
           content = "{\"Error\":\"404 not found\"}";
           statusCode = 404;
