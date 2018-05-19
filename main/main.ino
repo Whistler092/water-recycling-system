@@ -44,7 +44,7 @@ ESP8266_Nokia5110 lcd = ESP8266_Nokia5110(PIN_SCLK,PIN_SDIN,PIN_DC,PIN_SCE,PIN_R
 const char* ssid = "wifidelmicro pass:10203040";
 const char* passphrase = "10203040";
 String registrationCode = "";
-
+String currentProcess = "";
 
 void setup() {
   // put your setup code here, to run once:
@@ -149,6 +149,7 @@ void electrovalve(String voltage){
     /*
      * TODO: Enviar notificación de llenado
      */
+     
 
     lcd.clear();
     lcd.setCursor(0,1);
@@ -157,6 +158,7 @@ void electrovalve(String voltage){
     lcd.print((String)"Lleno" + distance + "CM");
     Serial.println((String)"Lleno" + distance + "CM");
     sendData((String)distance, (String)voltage);
+    currentProcess = "";
     /*
      * void sendData(String distance, String, turbidity)
 
@@ -200,7 +202,6 @@ void electrovalve(String voltage){
  * Logica de negocio para las peticiones HTTP y wifi
  * 
  * **/
-String currentProcess = "";
 void sendData(String distance, String turbidity)
 {
   Serial.println("Enviando petición http");
@@ -219,7 +220,7 @@ void sendData(String distance, String turbidity)
   // Print responses
   Serial.println(httpGETCode);
     
-  String currentProcess = http.getString();
+  currentProcess = http.getString();
   Serial.println((String)"Enviando petición http ... Resultado: "+ currentProcess);
   http.end();
   Serial.println("Petición http enviada");
