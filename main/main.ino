@@ -19,18 +19,18 @@
  Some code and wiring inspired by http://en.wikiversity.org/wiki/User:Dstaub/robotcar
  */
 
-#define pintrigger 10       //Cambiar de 4 a 10
-#define pinecho 9           //Cambiar de 5 a 9
-#define pinelectrovalve 13  //Cambiar de 14 a 13
-#define led2 15              //Cambiar de 2 a 15
+#define pintrigger 3       //Cambiar de 4 a 10
+#define pinecho 15           //Cambiar de 5 a 9
+#define pinelectrovalve 12  //Cambiar de 14 a 13
+#define led2 10              //Cambiar de 2 a 15
 
 ESP8266WebServer server(80);
 
 
 #define PIN_SCE   5  //D1
 #define PIN_RESET 4  //D2
-#define PIN_DC    0  //D3
-#define PIN_SDIN  2  //D4
+#define PIN_DC    2  //D3
+#define PIN_SDIN  1  //D4
 #define PIN_SCLK  14 //D5
 
 // LCD Gnd .... GND
@@ -43,6 +43,8 @@ ESP8266_Nokia5110 lcd = ESP8266_Nokia5110(PIN_SCLK,PIN_SDIN,PIN_DC,PIN_SCE,PIN_R
 // WIFI Por defecto
 const char* ssid = "wifidelmicro pass:10203040";
 const char* passphrase = "10203040";
+String registrationCode = "";
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -67,11 +69,11 @@ void setup() {
     lcd.clear();
     lcd.setCursor(0,1);
     lcd.print("Conexion establecida al wifi");
-    Serial.print("ESP conectado al wifi");
+    Serial.println("ESP conectado al wifi");
 
     registrarESP();
     
-    ESP.reset();
+    /*ESP.reset();*/
     /*digitalWrite(pinelectrovalve,LOW);*/
     /*sendData("HOla desde la ESP");*/
   } else {
@@ -87,8 +89,6 @@ void loop() {
     
     if (WiFi.status() == WL_CONNECTED) { 
 
-      
-      
       Serial.println("leyendo...");
        //Sensor Tubidity
       int sensorValue = analogRead(A0);// read the input on analog pin 0:
@@ -97,19 +97,19 @@ void loop() {
       Serial.println(voltage); // print out the value you read:
       //Serial.println(sensorValue); // print out the value you read:
       //delay(500);
+      voltage = 4.4;
       if (voltage < 4.3) {
-        /*lcd.clear();*/
-        lcd.setCursor(0,1);
+        lcd.clear();
+        if(registrationCode.length() > 1){
+          lcd.setCursor(0,1);
+          lcd.print((String)"Codigo: "+ registrationCode);
+        }
+        lcd.setCursor(1,2);
         lcd.print("Leyendo ...");
         lcd.setCursor(3,4);
         lcd.print((String)"Estado agua");
         lcd.setCursor(4,5);
-        lcd.print((String)"Sucia " + voltage);
-        /*lcd.clear();
-        lcd.setCursor(0,1);
-        lcd.print("Leyendo...");
-        lcd.setCursor(1,2);
-        lcd.print((String)"El agua está sucia");*/
+        lcd.print((String)"Sucia " + voltage); 
         
         Serial.println("el agua esta sucia");
         digitalWrite(pintrigger, LOW);
@@ -119,7 +119,7 @@ void loop() {
       }
       else {
         /*Serial.println("Reciclando ");*/
-        electrovalve();
+        electrovalve((String)voltage);
       }
     }
     delay(500);
@@ -131,7 +131,7 @@ void loop() {
  * Logica de negocio
  */
 
-void electrovalve(){
+void electrovalve(String voltage){
   //Conection HC-SR04 and Electrovalve
   long duration, distance;
   digitalWrite(pintrigger, LOW);  // Added this line
@@ -155,7 +155,12 @@ void electrovalve(){
     lcd.print("Leyendo...");
     lcd.setCursor(1,2);
     lcd.print((String)"Lleno" + distance + "CM");
-    
+    Serial.println((String)"Lleno" + distance + "CM");
+    sendData((String)distance, (String)voltage);
+    /*
+     * void sendData(String distance, String, turbidity)
+
+     */
   }
   else {
     digitalWrite(pinelectrovalve,LOW);
@@ -171,20 +176,19 @@ void electrovalve(){
     lcd.setCursor(1,2);
     lcd.print((String)"Fuera de Rango" + distance + "CM");
     
-    sendData((String)"Fuera de Rango " + distance);
+    /*sendData((String)"Fuera de Rango " + distance);*/
   }
   else {
     Serial.print(distance);
     Serial.println(" cm");
-    sendData((String)"llenando " + distance);
-    /*
-     * TODO: Enviar notificación de llenado
-     */
+    /*sendData((String)"llenando " + distance);*/
+    
     lcd.clear();
     lcd.setCursor(0,1);
     lcd.print("Leyendo...");
     lcd.setCursor(1,2);
     lcd.print((String)"Llenando" + distance);
+    sendData((String)distance, (String)voltage);
 
   }
 }
@@ -196,30 +200,41 @@ void electrovalve(){
  * Logica de negocio para las peticiones HTTP y wifi
  * 
  * **/
-void sendData(String content)
+String currentProcess = "";
+void sendData(String distance, String turbidity)
 {
   Serial.println("Enviando petición http");
 
   HTTPClient http;
-  http.begin("http://wr.ramirobedoya.me:5000/api/logs");
+  http.begin((String)"http://wr.ramirobedoya.me:5000/api/events/" + registrationCode);
+  
   http.addHeader("Content-Type", "application/json");
-  http.POST((String)"{ 'description' : '" + content + "'}");
-  /*Serial.println((String)"Enviando petición http ... Resultado: "+ http.getString());*/
-  http.writeToStream(&Serial);
-
+  int httpGETCode = 0;
+  if(currentProcess.length() > 1) {
+    httpGETCode = http.POST((String)"{ 'Process' : '" + currentProcess + "',  'Distance' : '" + distance + "', 'Turbidity' : '" + turbidity + "', }");
+  }else {
+    httpGETCode = http.POST((String)"{ 'Distance' : '" + distance + "', 'Turbidity' : '" + turbidity + "', }");  
+  }
+  
+  // Print responses
+  Serial.println(httpGETCode);
+    
+  String currentProcess = http.getString();
+  Serial.println((String)"Enviando petición http ... Resultado: "+ currentProcess);
   http.end();
   Serial.println("Petición http enviada");
 }
 
-String registrationCode = "";
 void registrarESP(void)
 {
   registrationCode = "";
+  Serial.println("Consultando registrationCode");
   for (int i = 96; i < 100; ++i)
   {
     registrationCode += char(EEPROM.read(i));
+    Serial.println(registrationCode);
   }  
-  if(registrationCode.length() > 1 && registrationCode == "⸮⸮⸮⸮")
+  if(registrationCode.length() > 1 && registrationCode != "⸮⸮⸮⸮")
   {
     Serial.println("registrationCode: " + registrationCode);  
   }else {
@@ -232,19 +247,32 @@ void registrarESP(void)
     Serial.println(httpBeginCode);
     Serial.println(httpGETCode);
       
-    String code = http.getString();
-    Serial.println((String)"Enviando petición http ... Resultado: "+ code);
+    String registrationCode = http.getString();
+    Serial.println((String)"Enviando petición http ... Resultado: "+ registrationCode);
 
-    for (int i = 0; i < code.length(); ++i)
-    {
-      EEPROM.write(i + 96, code[i]);
-      Serial.println((String)"Wrote: " + code[i] + " at " + i);      
-    }    
-    EEPROM.commit();
+    if(registrationCode.length() > 1){
+      for (int i = 0; i < registrationCode.length(); ++i)
+      {
+        EEPROM.write(i + 96, registrationCode[i]);
+        Serial.println((String)"Wrote: " + registrationCode[i] + " at " + i);      
+      }    
+      EEPROM.commit();
+    
+      http.end();
+      Serial.println("Petición http enviada, guardando codigo");
   
-    http.end();
-    Serial.println("Petición http enviada, guardando codigo");
+      lcd.clear();
+      lcd.setCursor(0,1);
+      lcd.print("Ingresa el");
+      lcd.setCursor(2,3);
+      lcd.print("Codigo");
+      lcd.setCursor(3,4);
+      lcd.print((String) registrationCode);
 
+    }else {
+      Serial.println("Error al registrar el dispositivo");
+    }
+    
     
   }
 }
@@ -476,9 +504,9 @@ void createWebServer(int webtype){
           content = "{\"Terminado! \":\"Archivos de configuración guardados correctamente... Reinicia el dispositivo para tomar la nueva configuración\"}";
           statusCode = 200;
           lcd.clear();
-          lcd.setCursor(1,2);
-          lcd.print("Reinicia");
           lcd.setCursor(0,2);
+          lcd.print("Reinicia");
+          lcd.setCursor(2,3);
           lcd.print("Para Continuar");
          
           /*ESP.restart();*/
