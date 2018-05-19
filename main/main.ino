@@ -20,7 +20,7 @@
  */
 
 #define pintrigger 3       //Cambiar de 4 a 10
-#define pinecho 15           //Cambiar de 5 a 9
+#define pinecho 0           //Cambiar de 5 a 9
 #define pinelectrovalve 12  //Cambiar de 14 a 13
 #define led2 10              //Cambiar de 2 a 15
 
@@ -29,7 +29,7 @@ ESP8266WebServer server(80);
 
 #define PIN_SCE   5  //D1
 #define PIN_RESET 4  //D2
-#define PIN_DC    2  //D3
+#define PIN_DC    16  //D3
 #define PIN_SDIN  1  //D4
 #define PIN_SCLK  14 //D5
 
@@ -72,6 +72,8 @@ void setup() {
     Serial.println("ESP conectado al wifi");
 
     registrarESP();
+    delay(2000);
+
     
     /*ESP.reset();*/
     /*digitalWrite(pinelectrovalve,LOW);*/
@@ -97,8 +99,8 @@ void loop() {
       Serial.println(voltage); // print out the value you read:
       //Serial.println(sensorValue); // print out the value you read:
       //delay(500);
-      voltage = 4.4;
-      if (voltage < 4.3) {
+      
+      if (voltage < 4.6) {
         lcd.clear();
         if(registrationCode.length() > 1){
           lcd.setCursor(0,1);
@@ -142,20 +144,24 @@ void electrovalve(String voltage){
   digitalWrite(pintrigger, LOW);
   duration = pulseIn(pinecho, HIGH);
   distance = (duration/2) / 29.1;
-  if (distance < 4) {  // This is where the LED On/Off happens
+  if (distance < 6) {  // This is where the LED On/Off happens
     digitalWrite(pinelectrovalve,HIGH); // When the Red condition is met, the Green LED should turn off
     digitalWrite(led2,LOW);
     /*sendData((String)"Lleno " + distance + "CM");*/
     /*
      * TODO: Enviar notificación de llenado
      */
-     
-
-    lcd.clear();
-    lcd.setCursor(0,1);
-    lcd.print("Leyendo...");
+    if(registrationCode.length() > 1){
+      lcd.setCursor(0,1);
+      lcd.print((String)"Codigo: "+ registrationCode);
+    }
     lcd.setCursor(1,2);
-    lcd.print((String)"Lleno" + distance + "CM");
+    lcd.print("Leyendo ...");
+    lcd.setCursor(3,4);
+    lcd.print((String)"Agua: " + voltage); 
+    lcd.setCursor(4,5);
+    lcd.print((String)"CMS: " + distance);
+    
     Serial.println((String)"Lleno" + distance + "CM");
     sendData((String)distance, (String)voltage);
     currentProcess = "";
@@ -163,6 +169,7 @@ void electrovalve(String voltage){
      * void sendData(String distance, String, turbidity)
 
      */
+     /* ESP.restart();*/
   }
   else {
     digitalWrite(pinelectrovalve,LOW);
@@ -172,11 +179,17 @@ void electrovalve(String voltage){
   if (distance >= 200 || distance <= 0){
     
     Serial.println("Fuera de Rango");
-    lcd.clear();
-    lcd.setCursor(0,1);
-    lcd.print("Leyendo...");
+        if(registrationCode.length() > 1){
+      lcd.setCursor(0,1);
+      lcd.print((String)"Codigo: "+ registrationCode);
+    }
     lcd.setCursor(1,2);
-    lcd.print((String)"Fuera de Rango" + distance + "CM");
+    lcd.print("Leyendo ...");
+    lcd.setCursor(3,4);
+    lcd.print((String)"Agua: " + voltage); 
+    lcd.setCursor(4,5);
+    lcd.print((String)"CMS: " + distance);
+
     
     /*sendData((String)"Fuera de Rango " + distance);*/
   }
@@ -185,14 +198,22 @@ void electrovalve(String voltage){
     Serial.println(" cm");
     /*sendData((String)"llenando " + distance);*/
     
-    lcd.clear();
-    lcd.setCursor(0,1);
-    lcd.print("Leyendo...");
+    
+    if(registrationCode.length() > 1){
+      lcd.setCursor(0,1);
+      lcd.print((String)"Codigo: "+ registrationCode);
+    }
     lcd.setCursor(1,2);
-    lcd.print((String)"Llenando" + distance);
+    lcd.print("Leyendo ...");
+    lcd.setCursor(3,4);
+    lcd.print((String)"Agua: " + voltage); 
+    lcd.setCursor(4,5);
+    lcd.print((String)"CMS: " + distance);
+
     sendData((String)distance, (String)voltage);
 
   }
+  
 }
 
 
