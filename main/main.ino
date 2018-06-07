@@ -134,8 +134,10 @@ void loop() {
  */
 
 void electrovalve(String voltage){
+  
   //Conection HC-SR04 and Electrovalve
   long duration, distance;
+  distance = 0;
   digitalWrite(pintrigger, LOW);  // Added this line
   delayMicroseconds(2); // Added this line
   digitalWrite(pintrigger, HIGH);
@@ -160,7 +162,7 @@ void electrovalve(String voltage){
     lcd.setCursor(3,4);
     lcd.print((String)"Agua: " + voltage); 
     lcd.setCursor(4,5);
-    lcd.print((String)"CMS: " + distance);
+    lcd.print((String)distance);
     
     Serial.println((String)"Lleno" + distance + "CM");
     sendData((String)distance, (String)voltage);
